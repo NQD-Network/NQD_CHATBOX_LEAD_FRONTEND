@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL; 
+
 const SERVICES = [
   "Website Development",
   "App Development",
@@ -83,7 +85,7 @@ export default function ChatBox() {
   // Create a new session on load
   async function createSession() {
     try {
-      const res = await axios.post("http://192.168.1.4:4000/api/session");
+      const res = await axios.post(`${API_BASE}/api/session`);
       setSessionId(res.data.sessionId);
     } catch (err) {
       console.error("Failed to create session:", err);
@@ -94,7 +96,7 @@ export default function ChatBox() {
   async function updateSession(data) {
     if (!sessionId) return;
     try {
-      await axios.put(`http://192.168.1.4:4000/api/session/${sessionId}`, data);
+      await axios.put(`${API_BASE}/api/session/${sessionId}`, data);
     } catch (err) {
       console.error("Session update failed:", err);
     }
@@ -185,7 +187,7 @@ export default function ChatBox() {
     setLoading(true);
     addMessage("bot", "Submitting your details...");
     try {
-      const res = await axios.post("http://192.168.1.4:4000/api/leads", {
+      const res = await axios.post(`${API_BASE}/api/leads`, {
         ...payload,
         sessionId,
       });
