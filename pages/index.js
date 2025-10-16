@@ -15,6 +15,11 @@ export default function Home() {
       <Head>
         <title>Simple Chat Lead</title>
         <meta name="description" content="Simple chatbot lead form" />
+
+        {/* ✅ Add this favicon line */}
+        {/* <link rel="icon" href="/favicon.ico" /> */}
+        {/* Or if you used a PNG file */}
+        <link rel="icon" type="image/png" href="/NQD_logo.png" />
       </Head>
 
       <main
