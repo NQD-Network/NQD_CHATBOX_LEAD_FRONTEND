@@ -1,0 +1,30 @@
+# ===== Global Ignore =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+package-lock.json
+
+# ===== Environment Files =====
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# ===== Next.js =====
+.next/
+out/
+
+# ===== Logs =====
+logs/
+*.log
+
+# ===== OS Files =====
+.DS_Store
+Thumbs.db
+
+# ===== Build Artifacts =====
+dist/
+build/
