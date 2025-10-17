@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import Link from "next/link";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL; 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const SERVICES = [
   "Website Development",
@@ -59,6 +60,7 @@ export default function ChatBox() {
   const [time, setTime] = useState("");
   const [timezone, setTimezone] = useState("");
   const [timezones, setTimezones] = useState([]);
+  const [showMenu, setShowMenu] = useState(false);
   const chatEndRef = useRef(null);
 
   const timeSlots = generateTimeSlots();
@@ -82,7 +84,7 @@ export default function ChatBox() {
     createSession();
   }, []);
 
-  // Create a new session on load
+  // Create a new session
   async function createSession() {
     try {
       const res = await axios.post(`${API_BASE}/api/session`);
@@ -218,41 +220,118 @@ export default function ChatBox() {
     return false;
   }
 
+  const hasStarted = stage !== "initial" || messages.length > 1;
+
   return (
     <div
       style={{
         width: "100%",
         minHeight: "100vh",
+        background: "#fefefe",
         display: "flex",
-        justifyContent: "center",
-        alignItems: "flex-start",
-        background: "#fafdfc",
-        fontFamily: "Gilroy-Light.eot, sans-serif",
-        padding: 16,
-        boxSizing: "border-box",
+        flexDirection: "column",
+        alignItems: "center",
+        position: "relative",
+        transition: "all 0.6s ease",
       }}
     >
-      {/* Before chat starts */}
-      {stage === "initial" && messages.length === 1 ? (
+      {/* Fixed Header appears after start */}
+      {hasStarted && (
+        <header
+          style={{
+            width: "100%",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            background: "#ffffffeb",
+            backdropFilter: "blur(10px)",
+            padding: "12px 24px",
+            borderBottom: "1px solid #eee",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            zIndex: 10,
+          }}
+        >
+          <h2 style={{ fontSize: 22, fontWeight: 600, color: "#0e8695" }}>
+            NQD.ai
+          </h2>
+
+        </header>
+      )}
+
+      {/* ? Hover Button fixed bottom-right */}
+      <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 100 }}>
+        <div
+          onClick={() => setShowMenu(!showMenu)}
+          style={{
+            cursor: "pointer",
+            fontSize: 28,
+            fontWeight: 600,
+            background: "#0e8695",
+            color: "#fff",
+            width: 50,
+            height: 50,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          }}
+        >
+          ?
+        </div>
+        {showMenu && (
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              bottom: 60,
+              background: "#fff",
+              border: "1px solid #ddd",
+              borderRadius: 12,
+              padding: "12px 20px",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              fontSize: 14,
+              minWidth: 180,
+              zIndex: 101,
+            }}
+          >
+            <Link
+              href="/privacy-policy"
+              style={{ color: "#000", textDecoration: "none" }}
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/terms-of-service"
+              style={{ color: "#000", textDecoration: "none" }}
+            >
+              Terms of Service
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Intro view before chat */}
+      {!hasStarted ? (
         <div
           style={{
             textAlign: "center",
             maxWidth: 500,
             width: "90%",
+            marginTop: "20vh",
+            transition: "all 0.5s ease",
             background: "#fff",
             padding: "60px 40px",
             borderRadius: 24,
             boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
           }}
         >
-          <h1
-            style={{
-              fontSize: 42,
-              fontWeight: 600,
-              color: "#11333d",
-              marginBottom: 40,
-            }}
-          >
+          <h1 style={{ fontSize: 42, fontWeight: 600, color: "#11333d", marginBottom: 40 }}>
             NQD<span style={{ color: "#0e8695" }}>.</span>ai
           </h1>
 
@@ -300,33 +379,13 @@ export default function ChatBox() {
         /* Active Chat View */
         <div
           style={{
-            width: "90%",
-            maxWidth: 800,
-            display: "flex",
-            flexDirection: "column",
-            background: "#fff",
-            borderRadius: 20,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
-            overflow: "visible",
-            paddingBottom: 16,
-            paddingTop: 250,
+            width: "70%",
+            maxWidth: 900,
+            marginTop: 100,
+            background: "transparent",
+            transition: "all 0.5s ease",
           }}
         >
-          {/* Header */}
-          <div
-            style={{
-              padding: "16px 20px",
-              background: "#0e8695",
-              color: "#fff",
-              fontSize: 18,
-              fontWeight: 600,
-              textAlign: "center",
-              paddingTop: 10,
-            }}
-          >
-            NQD.ai
-          </div>
-
           {/* Chat Messages */}
           <div
             style={{
@@ -334,7 +393,9 @@ export default function ChatBox() {
               flexDirection: "column",
               gap: 10,
               background: "#f9fafb",
-              margin: 16,
+              borderRadius: 16,
+              padding: 20,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
             }}
           >
             {messages.map((m, i) => (
@@ -345,13 +406,11 @@ export default function ChatBox() {
                   background: m.from === "bot" ? "#eef3f5" : "#d1f7f0",
                   padding: "10px 14px",
                   borderRadius:
-                    m.from === "bot" ? "16px 16px 16px 4px" : "16px 16px 4px 16px",
+                    m.from === "bot"
+                      ? "16px 16px 16px 4px"
+                      : "16px 16px 4px 16px",
                   maxWidth: "80%",
                   fontSize: 14.5,
-                  lineHeight: 1.4,
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.04)",
-                  fontFamily: "Gilroy-Light.eot, sans-serif",
-                  // fontWeight: "bold",
                   color: "#111",
                 }}
               >
@@ -361,208 +420,188 @@ export default function ChatBox() {
             <div ref={chatEndRef} />
           </div>
 
-          {/* Input / Service / Time Selection Section */}
-          {(stage === "chooseService" ||
-            stage === "askName" ||
-            stage === "askEmail" ||
-            stage === "askPhone" ||
-            stage === "askBestTime") && (
-              <div style={{ padding: 16 }}>
-                {/* Service Buttons */}
-                {stage === "chooseService" && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      justifyContent: "center",
-                      gap: 8,
-                    }}
-                  >
-                    {SERVICES.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => chooseService(s)}
-                        style={{
-                          padding: "8px 10px",
-                          borderRadius: 8,
-                          border: "1px solid #ccc",
-                          background: "#fafafa",
-                          cursor: "pointer",
-                          transition: "0.2s",
-                        }}
-                        onMouseOver={(e) =>
-                          (e.currentTarget.style.background = "#e6f7ff")
-                        }
-                        onMouseOut={(e) =>
-                          (e.currentTarget.style.background = "#fafafa")
-                        }
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Form Input */}
-                {(stage === "askName" ||
-                  stage === "askEmail" ||
-                  stage === "askPhone" ||
-                  stage === "askBestTime" ||
-                  stage === "initial") && (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        if (stage === "askBestTime") {
-                          handleAnswer();
-                        } else if (input.trim()) {
-                          if (
-                            stage === "askName" ||
-                            stage === "askEmail" ||
-                            stage === "askPhone"
-                          ) {
-                            handleAnswer(input);
-                          } else {
-                            handleUserSend();
-                          }
-                        }
-                        setInput("");
-                      }}
+          {/* Input / Form Section */}
+          <div style={{ padding: 16 }}>
+            {(stage === "chooseService" ||
+              stage === "askName" ||
+              stage === "askEmail" ||
+              stage === "askPhone" ||
+              stage === "askBestTime") && (
+                <>
+                  {stage === "chooseService" && (
+                    <div
                       style={{
                         display: "flex",
-                        flexDirection: "column",
-                        gap: 10,
-                        marginTop: 10,
+                        flexWrap: "wrap",
+                        justifyContent: "center",
+                        gap: 8,
                       }}
                     >
-                      {stage === "askBestTime" ? (
-                        <>
-                          <input
-                            type="date"
-                            value={date}
-                            min={new Date().toISOString().split("T")[0]}
-                            onChange={(e) => setDate(e.target.value)}
-                            required
-                            style={{
-                              padding: 8,
-                              borderRadius: 6,
-                              border: "1px solid #ccc",
-                              fontSize: 14,
-                            }}
-                          />
-
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 1fr",
-                              gap: 8,
-                            }}
-                          >
-                            {timeSlots.map((slot) => (
-                              <button
-                                key={slot.value}
-                                type="button"
-                                onClick={() => setTime(slot.value)}
-                                disabled={isTimeSlotDisabled(slot.value)}
-                                style={{
-                                  padding: "8px 10px",
-                                  borderRadius: 8,
-                                  border:
-                                    time === slot.value
-                                      ? "2px solid #007bff"
-                                      : "1px solid #ccc",
-                                  background: time === slot.value ? "#007bff" : "#fff",
-                                  color: isTimeSlotDisabled(slot.value)
-                                    ? "#aaa"
-                                    : time === slot.value
-                                      ? "#fff"
-                                      : "#333",
-                                  cursor: isTimeSlotDisabled(slot.value)
-                                    ? "not-allowed"
-                                    : "pointer",
-                                  fontSize: 13,
-                                  fontWeight: 500,
-                                  transition: "0.2s",
-                                }}
-                              >
-                                {slot.label}
-                              </button>
-                            ))}
-                          </div>
-
-                          <select
-                            value={timezone}
-                            onChange={(e) => setTimezone(e.target.value)}
-                            style={{
-                              padding: 8,
-                              borderRadius: 6,
-                              border: "1px solid #ccc",
-                              fontSize: 14,
-                            }}
-                          >
-                            {timezones.map((z) => (
-                              <option key={z} value={z}>
-                                {z}
-                              </option>
-                            ))}
-                          </select>
-
-                          <button
-                            type="submit"
-                            style={{
-                              background: "#0e8695",
-                              border: "none",
-                              color: "#fff",
-                              padding: "8px 14px",
-                              borderRadius: 12,
-                              cursor: "pointer",
-                              fontWeight: 500,
-                            }}
-                          >
-                            ➤
-                          </button>
-                        </>
-                      ) : (
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <input
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            placeholder={
-                              stage === "askName"
-                                ? "Your full name"
-                                : stage === "askEmail"
-                                  ? "Your email"
-                                  : stage === "askPhone"
-                                    ? "Contact number"
-                                    : "Type here..."
-                            }
-                            style={{
-                              flex: 1,
-                              padding: 8,
-                              borderRadius: 6,
-                              border: "1px solid #ccc",
-                              fontSize: 14,
-                            }}
-                          />
-                          <button
-                            type="submit"
-                            style={{
-                              background: "#0e8695",
-                              border: "none",
-                              color: "#fff",
-                              padding: "8px 14px",
-                              borderRadius: 12,
-                              cursor: "pointer",
-                              fontWeight: 500,
-                            }}
-                          >
-                            ➤
-                          </button>
-                        </div>
-                      )}
-                    </form>
+                      {SERVICES.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => chooseService(s)}
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            border: "1px solid #ccc",
+                            background: "#fafafa",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   )}
-              </div>
-            )}
+
+                  {(stage === "askName" ||
+                    stage === "askEmail" ||
+                    stage === "askPhone" ||
+                    stage === "askBestTime") && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (stage === "askBestTime") {
+                            handleAnswer();
+                          } else if (input.trim()) {
+                            handleAnswer(input);
+                          }
+                          setInput("");
+                        }}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 10,
+                          marginTop: 10,
+                        }}
+                      >
+                        {stage === "askBestTime" ? (
+                          <>
+                            <input
+                              type="date"
+                              value={date}
+                              min={new Date().toISOString().split("T")[0]}
+                              onChange={(e) => setDate(e.target.value)}
+                              required
+                              style={{
+                                padding: 8,
+                                borderRadius: 6,
+                                border: "1px solid #ccc",
+                                fontSize: 14,
+                              }}
+                            />
+
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 1fr",
+                                gap: 8,
+                              }}
+                            >
+                              {timeSlots.map((slot) => (
+                                <button
+                                  key={slot.value}
+                                  type="button"
+                                  onClick={() => setTime(slot.value)}
+                                  disabled={isTimeSlotDisabled(slot.value)}
+                                  style={{
+                                    padding: "8px 10px",
+                                    borderRadius: 8,
+                                    border:
+                                      time === slot.value
+                                        ? "2px solid #007bff"
+                                        : "1px solid #ccc",
+                                    background:
+                                      time === slot.value ? "#007bff" : "#fff",
+                                    color: isTimeSlotDisabled(slot.value)
+                                      ? "#aaa"
+                                      : time === slot.value
+                                        ? "#fff"
+                                        : "#333",
+                                    cursor: isTimeSlotDisabled(slot.value)
+                                      ? "not-allowed"
+                                      : "pointer",
+                                  }}
+                                >
+                                  {slot.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            <select
+                              value={timezone}
+                              onChange={(e) => setTimezone(e.target.value)}
+                              style={{
+                                padding: 8,
+                                borderRadius: 6,
+                                border: "1px solid #ccc",
+                                fontSize: 14,
+                              }}
+                            >
+                              {timezones.map((z) => (
+                                <option key={z} value={z}>
+                                  {z}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              type="submit"
+                              style={{
+                                background: "#0e8695",
+                                border: "none",
+                                color: "#fff",
+                                padding: "8px 14px",
+                                borderRadius: 12,
+                                cursor: "pointer",
+                                fontWeight: 500,
+                              }}
+                            >
+                              ➤
+                            </button>
+                          </>
+                        ) : (
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <input
+                              value={input}
+                              onChange={(e) => setInput(e.target.value)}
+                              placeholder={
+                                stage === "askName"
+                                  ? "Your full name"
+                                  : stage === "askEmail"
+                                    ? "Your email"
+                                    : "Contact number"
+                              }
+                              style={{
+                                flex: 1,
+                                padding: 8,
+                                borderRadius: 6,
+                                border: "1px solid #ccc",
+                                fontSize: 14,
+                              }}
+                            />
+                            <button
+                              type="submit"
+                              style={{
+                                background: "#0e8695",
+                                border: "none",
+                                color: "#fff",
+                                padding: "8px 14px",
+                                borderRadius: 12,
+                                cursor: "pointer",
+                                fontWeight: 500,
+                              }}
+                            >
+                              ➤
+                            </button>
+                          </div>
+                        )}
+                      </form>
+                    )}
+                </>
+              )}
+          </div>
 
           {loading && (
             <div style={{ marginTop: 8, fontSize: 13, color: "#555", padding: 16 }}>
