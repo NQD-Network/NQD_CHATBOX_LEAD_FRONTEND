@@ -1,9 +1,24 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import axios from "axios";
 import Link from "next/link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+// Validation functions
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const validatePhone = (phone) => {
+  const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
+  return phoneRegex.test(phone);
+};
+
+const validateName = (name) => {
+  return name.trim().length >= 2 && name.trim().length <= 100;
+};
 
 const SERVICES = [
   "Website Development",
@@ -61,9 +76,13 @@ export default function ChatBox() {
   const [timezone, setTimezone] = useState("");
   const [timezones, setTimezones] = useState([]);
   const [showMenu, setShowMenu] = useState(false);
+  const [error, setError] = useState(null);
+  const [sessionError, setSessionError] = useState(false);
   const chatEndRef = useRef(null);
+  const isMountedRef = useRef(true);
 
-  const timeSlots = generateTimeSlots();
+  // Memoize timeSlots to avoid recalculation on every render
+  const timeSlots = useMemo(() => generateTimeSlots(), []);
 
   // Scroll to bottom
   useEffect(() => {
@@ -72,6 +91,15 @@ export default function ChatBox() {
 
   // Setup timezone and create session on load
   useEffect(() => {
+    // Check if API_BASE is configured
+    if (!API_BASE) {
+      setSessionError(true);
+      setError("Configuration error: API endpoint not configured. Please contact support.");
+      return;
+    }
+
+    isMountedRef.current = true;
+
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
     try {
       const zones = Intl.supportedValuesOf("timeZone");
@@ -82,25 +110,60 @@ export default function ChatBox() {
 
     // create new session when chat loads
     createSession();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
-  // Create a new session
-  async function createSession() {
+  // Create a new session with retry logic
+  async function createSession(retryCount = 0) {
+    const maxRetries = 3;
     try {
       const res = await axios.post(`${API_BASE}/api/session`);
-      setSessionId(res.data.sessionId);
+      if (isMountedRef.current && res.data.sessionId) {
+        setSessionId(res.data.sessionId);
+        setSessionError(false);
+      }
     } catch (err) {
       console.error("Failed to create session:", err);
+      if (retryCount < maxRetries) {
+        // Retry with exponential backoff
+        const delay = Math.pow(2, retryCount) * 1000;
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            createSession(retryCount + 1);
+          }
+        }, delay);
+      } else {
+        if (isMountedRef.current) {
+          setSessionError(true);
+          setError("Unable to connect to the server. Please refresh the page or try again later.");
+        }
+      }
     }
   }
 
-  // Update session data after every step
-  async function updateSession(data) {
-    if (!sessionId) return;
+  // Update session data after every step with retry logic
+  async function updateSession(data, retryCount = 0) {
+    if (!sessionId) {
+      console.warn("No session ID available for update");
+      return;
+    }
+    const maxRetries = 2;
     try {
       await axios.put(`${API_BASE}/api/session/${sessionId}`, data);
     } catch (err) {
       console.error("Session update failed:", err);
+      if (retryCount < maxRetries) {
+        const delay = Math.pow(2, retryCount) * 500;
+        setTimeout(() => {
+          updateSession(data, retryCount + 1);
+        }, delay);
+      } else {
+        // Session update failed but don't block user progress
+        console.error("Session update failed after retries");
+      }
     }
   }
 
@@ -137,57 +200,82 @@ export default function ChatBox() {
 
   function handleAnswer(answer) {
     if (stage === "askName") {
-      const newData = { name: answer };
+      if (!validateName(answer)) {
+        setError("Please enter a valid name (2-100 characters).");
+        return;
+      }
+      const newData = { name: answer.trim() };
       setCollected((prev) => ({ ...prev, ...newData }));
       updateSession(newData);
-      addMessage("user", answer);
+      addMessage("user", answer.trim());
       setStage("askEmail");
       addMessage("bot", "Please provide your email.");
       setInput("");
+      setError(null);
       return;
     }
     if (stage === "askEmail") {
-      const newData = { email: answer };
+      if (!validateEmail(answer)) {
+        setError("Please enter a valid email address.");
+        return;
+      }
+      const newData = { email: answer.trim() };
       setCollected((prev) => ({ ...prev, ...newData }));
       updateSession(newData);
-      addMessage("user", answer);
+      addMessage("user", answer.trim());
       setStage("askPhone");
       addMessage("bot", "Please provide your contact number.");
       setInput("");
+      setError(null);
       return;
     }
     if (stage === "askPhone") {
-      const newData = { phone: answer };
+      if (!validatePhone(answer)) {
+        setError("Please enter a valid phone number (minimum 10 digits).");
+        return;
+      }
+      const newData = { phone: answer.trim() };
       setCollected((prev) => ({ ...prev, ...newData }));
       updateSession(newData);
-      addMessage("user", answer);
+      addMessage("user", answer.trim());
       setStage("askBestTime");
       addMessage("bot", "Please select a date, time slot, and timezone 📅");
-      setInput("");
+      setError(null);
       return;
     }
     if (stage === "askBestTime") {
       if (!date || !time) {
-        alert("Please select date & time.");
+        setError("Please select both date and time.");
         return;
       }
 
       const bestTimeString = `${date} ${time} (${timezone})`;
-      const newData = { bestTime: bestTimeString };
-      setCollected((prev) => ({ ...prev, ...newData }));
-      updateSession(newData);
-      addMessage("user", bestTimeString);
-      submitLead({
-        ...collected,
-        bestTime: bestTimeString,
-        service: selectedService,
+
+      // Fix race condition: use the current collected state values
+      setCollected((prev) => {
+        const finalData = {
+          ...prev,
+          bestTime: bestTimeString,
+          service: selectedService,
+        };
+
+        // Submit with the complete data
+        addMessage("user", bestTimeString);
+        submitLead(finalData);
+
+        return { ...prev, bestTime: bestTimeString };
       });
+
+      updateSession({ bestTime: bestTimeString });
+      setError(null);
     }
   }
 
-  async function submitLead(payload) {
+  async function submitLead(payload, retryCount = 0) {
     setLoading(true);
     addMessage("bot", "Submitting your details...");
+    const maxRetries = 2;
+
     try {
       const res = await axios.post(`${API_BASE}/api/leads`, {
         ...payload,
@@ -196,26 +284,50 @@ export default function ChatBox() {
       if (res.data && res.data.success) {
         addMessage("bot", "✅ Thank you! We will contact you soon.");
         setStage("done");
+        setError(null);
       } else {
         addMessage("bot", "Something went wrong. Please try again later.");
+        setError("Submission failed. Please try again.");
       }
     } catch (err) {
-      console.error(err);
-      addMessage("bot", "Failed to submit. Please try again later.");
+      console.error("Lead submission error:", err);
+      if (retryCount < maxRetries) {
+        const delay = Math.pow(2, retryCount) * 1000;
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            // Remove the "Submitting..." message before retry
+            setMessages((prev) => prev.slice(0, -1));
+            submitLead(payload, retryCount + 1);
+          }
+        }, delay);
+      } else {
+        addMessage("bot", "Failed to submit. Please check your connection and try again later.");
+        setError("Unable to submit your details. Please try again or contact support.");
+        setLoading(false);
+      }
+      return;
     }
     setLoading(false);
   }
 
   function isTimeSlotDisabled(slotValue) {
     if (!date) return false;
-    const today = new Date();
-    const selectedDate = new Date(date);
-    if (selectedDate.toDateString() === today.toDateString()) {
+    const now = new Date();
+    const selectedDate = new Date(date + "T00:00:00");
+
+    // Compare dates properly (year, month, day)
+    const isSameDay =
+      selectedDate.getFullYear() === now.getFullYear() &&
+      selectedDate.getMonth() === now.getMonth() &&
+      selectedDate.getDate() === now.getDate();
+
+    if (isSameDay) {
       const [hour, minute] = slotValue.split(":").map(Number);
-      return (
-        hour < today.getHours() ||
-        (hour === today.getHours() && minute <= today.getMinutes())
-      );
+      const slotTime = hour * 60 + minute;
+      const currentTime = now.getHours() * 60 + now.getMinutes();
+
+      // Disable if slot is in the past or within 30 minutes
+      return slotTime <= currentTime + 30;
     }
     return false;
   }
@@ -335,6 +447,24 @@ export default function ChatBox() {
             NQD<span style={{ color: "#0e8695" }}>.</span>ai
           </h1>
 
+          {error && sessionError && (
+            <div
+              role="alert"
+              style={{
+                padding: "12px 16px",
+                background: "#fee",
+                border: "1px solid #fcc",
+                borderRadius: 8,
+                color: "#c33",
+                fontSize: 14,
+                marginBottom: 20,
+                textAlign: "left",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
           <form
             onSubmit={handleUserSend}
             style={{
@@ -348,9 +478,12 @@ export default function ChatBox() {
             }}
           >
             <input
+              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask anything or describe your project..."
+              disabled={sessionError || loading}
+              aria-label="Your message or project description"
               style={{
                 flex: 1,
                 border: "none",
@@ -361,13 +494,15 @@ export default function ChatBox() {
             />
             <button
               type="submit"
+              disabled={sessionError || loading || !input.trim()}
+              aria-label="Send message"
               style={{
-                background: "#0e8695",
+                background: sessionError || loading || !input.trim() ? "#ccc" : "#0e8695",
                 border: "none",
                 color: "#fff",
                 padding: "8px 14px",
                 borderRadius: 12,
-                cursor: "pointer",
+                cursor: sessionError || loading || !input.trim() ? "not-allowed" : "pointer",
                 fontWeight: 500,
               }}
             >
@@ -420,6 +555,24 @@ export default function ChatBox() {
             <div ref={chatEndRef} />
           </div>
 
+          {/* Error Display */}
+          {error && !sessionError && (
+            <div
+              role="alert"
+              style={{
+                padding: "12px 16px",
+                background: "#fee",
+                border: "1px solid #fcc",
+                borderRadius: 8,
+                color: "#c33",
+                fontSize: 14,
+                marginTop: 16,
+              }}
+            >
+              {error}
+            </div>
+          )}
+
           {/* Input / Form Section */}
           <div style={{ padding: 16 }}>
             {(stage === "chooseService" ||
@@ -441,12 +594,14 @@ export default function ChatBox() {
                         <button
                           key={s}
                           onClick={() => chooseService(s)}
+                          disabled={loading}
+                          aria-label={`Select ${s} service`}
                           style={{
                             padding: "8px 10px",
                             borderRadius: 8,
                             border: "1px solid #ccc",
-                            background: "#fafafa",
-                            cursor: "pointer",
+                            background: loading ? "#eee" : "#fafafa",
+                            cursor: loading ? "not-allowed" : "pointer",
                           }}
                         >
                           {s}
@@ -483,7 +638,9 @@ export default function ChatBox() {
                               value={date}
                               min={new Date().toISOString().split("T")[0]}
                               onChange={(e) => setDate(e.target.value)}
+                              disabled={loading}
                               required
+                              aria-label="Select date"
                               style={{
                                 padding: 8,
                                 borderRadius: 6,
@@ -498,13 +655,17 @@ export default function ChatBox() {
                                 gridTemplateColumns: "1fr 1fr",
                                 gap: 8,
                               }}
+                              role="group"
+                              aria-label="Select time slot"
                             >
                               {timeSlots.map((slot) => (
                                 <button
                                   key={slot.value}
                                   type="button"
                                   onClick={() => setTime(slot.value)}
-                                  disabled={isTimeSlotDisabled(slot.value)}
+                                  disabled={isTimeSlotDisabled(slot.value) || loading}
+                                  aria-label={`Time slot ${slot.label}`}
+                                  aria-pressed={time === slot.value}
                                   style={{
                                     padding: "8px 10px",
                                     borderRadius: 8,
@@ -514,12 +675,12 @@ export default function ChatBox() {
                                         : "1px solid #ccc",
                                     background:
                                       time === slot.value ? "#007bff" : "#fff",
-                                    color: isTimeSlotDisabled(slot.value)
+                                    color: isTimeSlotDisabled(slot.value) || loading
                                       ? "#aaa"
                                       : time === slot.value
                                         ? "#fff"
                                         : "#333",
-                                    cursor: isTimeSlotDisabled(slot.value)
+                                    cursor: isTimeSlotDisabled(slot.value) || loading
                                       ? "not-allowed"
                                       : "pointer",
                                   }}
@@ -532,6 +693,8 @@ export default function ChatBox() {
                             <select
                               value={timezone}
                               onChange={(e) => setTimezone(e.target.value)}
+                              disabled={loading}
+                              aria-label="Select timezone"
                               style={{
                                 padding: 8,
                                 borderRadius: 6,
@@ -548,13 +711,15 @@ export default function ChatBox() {
 
                             <button
                               type="submit"
+                              disabled={loading || !date || !time}
+                              aria-label="Submit date and time"
                               style={{
-                                background: "#0e8695",
+                                background: loading || !date || !time ? "#ccc" : "#0e8695",
                                 border: "none",
                                 color: "#fff",
                                 padding: "8px 14px",
                                 borderRadius: 12,
-                                cursor: "pointer",
+                                cursor: loading || !date || !time ? "not-allowed" : "pointer",
                                 fontWeight: 500,
                               }}
                             >
@@ -564,6 +729,13 @@ export default function ChatBox() {
                         ) : (
                           <div style={{ display: "flex", gap: 8 }}>
                             <input
+                              type={
+                                stage === "askEmail"
+                                  ? "email"
+                                  : stage === "askPhone"
+                                    ? "tel"
+                                    : "text"
+                              }
                               value={input}
                               onChange={(e) => setInput(e.target.value)}
                               placeholder={
@@ -572,6 +744,21 @@ export default function ChatBox() {
                                   : stage === "askEmail"
                                     ? "Your email"
                                     : "Contact number"
+                              }
+                              disabled={loading}
+                              aria-label={
+                                stage === "askName"
+                                  ? "Full name"
+                                  : stage === "askEmail"
+                                    ? "Email address"
+                                    : "Phone number"
+                              }
+                              autoComplete={
+                                stage === "askName"
+                                  ? "name"
+                                  : stage === "askEmail"
+                                    ? "email"
+                                    : "tel"
                               }
                               style={{
                                 flex: 1,
@@ -583,13 +770,15 @@ export default function ChatBox() {
                             />
                             <button
                               type="submit"
+                              disabled={loading || !input.trim()}
+                              aria-label="Submit"
                               style={{
-                                background: "#0e8695",
+                                background: loading || !input.trim() ? "#ccc" : "#0e8695",
                                 border: "none",
                                 color: "#fff",
                                 padding: "8px 14px",
                                 borderRadius: 12,
-                                cursor: "pointer",
+                                cursor: loading || !input.trim() ? "not-allowed" : "pointer",
                                 fontWeight: 500,
                               }}
                             >
