@@ -24,10 +24,10 @@ export default function MyApp({ Component, pageProps }) {
   return (
     <>
       <Head>
-        {/* Load Gilroy Font */}
+        {/* Load Gilroy Font from local storage */}
         <link
           rel="stylesheet"
-          href="https://gistcdn.githack.com/mfd/09b70eb47474836f25a21660282ce0fd/raw/e06a670afcb2b861ed2ac4a1ef752d062ef6b46b/Gilroy.css"
+          href="/fonts/gilroy.css"
         />
       </Head>
 
