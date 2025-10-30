@@ -1,6 +1,7 @@
 // pages/_app.js
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import Script from "next/script";
 
 export default function MyApp({ Component, pageProps }) {
@@ -22,6 +23,14 @@ export default function MyApp({ Component, pageProps }) {
 
   return (
     <>
+      <Head>
+        {/* Load Gilroy Font from local storage */}
+        <link
+          rel="stylesheet"
+          href="/fonts/gilroy.css"
+        />
+      </Head>
+
       {/* Load Google Analytics script asynchronously if GA_ID is configured */}
       {GA_ID && (
         <>
@@ -40,6 +49,21 @@ export default function MyApp({ Component, pageProps }) {
           </Script>
         </>
       )}
+
+      {/* Global styles */}
+      <style jsx global>{`
+        * {
+          font-family: 'Gilroy', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                       'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans',
+                       'Droid Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: 'Gilroy', sans-serif;
+        }
+      `}</style>
 
       {/* Render your actual pages */}
       <Component {...pageProps} />
