@@ -5,35 +5,41 @@ import Script from "next/script";
 
 export default function MyApp({ Component, pageProps }) {
   const router = useRouter();
+  const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
   // Track page view on route change (important for Next.js)
   useEffect(() => {
+    if (!GA_ID) return;
+
     const handleRouteChange = (url) => {
-      window.gtag("config", "G-5W1QMEV79W", {
+      window.gtag("config", GA_ID, {
         page_path: url,
       });
     };
     router.events.on("routeChangeComplete", handleRouteChange);
     return () => router.events.off("routeChangeComplete", handleRouteChange);
-  }, [router.events]);
+  }, [router.events, GA_ID]);
 
   return (
     <>
-      {/* ✅ Load Google Analytics script asynchronously */}
-      <Script
-        strategy="afterInteractive"
-        src="https://www.googletagmanager.com/gtag/js?id=G-5W1QMEV79W"
-      />
+      {/* Load Google Analytics script asynchronously if GA_ID is configured */}
+      {GA_ID && (
+        <>
+          <Script
+            strategy="afterInteractive"
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          />
 
-      {/* ✅ Initialize Google Analytics */}
-      <Script id="google-analytics" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-5W1QMEV79W');
-        `}
-      </Script>
+          <Script id="google-analytics" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_ID}');
+            `}
+          </Script>
+        </>
+      )}
 
       {/* Render your actual pages */}
       <Component {...pageProps} />

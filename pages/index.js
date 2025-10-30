@@ -6,11 +6,11 @@ import React from "react";
 const ChatBox = dynamic(() => import("../src/components/ChatBox"), { ssr: false });
 
 export default function Home() {
-  const siteUrl = "https://www.nqd.ai/";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nqd.ai/";
   const title = "NQD.ai – Smart Chat Lead Assistant";
   const description =
     "Chat instantly with NQD.ai — your intelligent assistant for web development, automation, and AI-driven solutions.";
-  const imageUrl = `${siteUrl}/NQD_logo.png`;
+  const imageUrl = `${siteUrl}NQD_logo.png`;
 
   return (
     <>
