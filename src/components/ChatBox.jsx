@@ -345,6 +345,7 @@ export default function ChatBox() {
         alignItems: "center",
         position: "relative",
         transition: "all 0.6s ease",
+        fontFamily: "'Gilroy', sans-serif",
       }}
     >
       {/* Fixed Header appears after start */}
@@ -365,7 +366,7 @@ export default function ChatBox() {
             zIndex: 10,
           }}
         >
-          <h2 style={{ fontSize: 22, fontWeight: 600, color: "#0e8695" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 600, color: "#0e8695", fontFamily: "'Gilroy', sans-serif" }}>
             NQD.ai
           </h2>
 
@@ -389,6 +390,7 @@ export default function ChatBox() {
             alignItems: "center",
             justifyContent: "center",
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+            fontFamily: "'Gilroy', sans-serif",
           }}
         >
           ?
@@ -410,6 +412,7 @@ export default function ChatBox() {
               fontSize: 14,
               minWidth: 180,
               zIndex: 101,
+              fontFamily: "'Gilroy', sans-serif",
             }}
           >
             <Link
@@ -443,7 +446,7 @@ export default function ChatBox() {
             boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
           }}
         >
-          <h1 style={{ fontSize: 42, fontWeight: 600, color: "#11333d", marginBottom: 40 }}>
+          <h1 style={{ fontSize: 42, fontWeight: 600, color: "#11333d", marginBottom: 40, fontFamily: "'Gilroy', sans-serif" }}>
             NQD<span style={{ color: "#0e8695" }}>.</span>ai
           </h1>
 
@@ -459,6 +462,7 @@ export default function ChatBox() {
                 fontSize: 14,
                 marginBottom: 20,
                 textAlign: "left",
+                fontFamily: "'Gilroy', sans-serif",
               }}
             >
               {error}
@@ -490,6 +494,7 @@ export default function ChatBox() {
                 outline: "none",
                 fontSize: 16,
                 background: "transparent",
+                fontFamily: "'Gilroy', sans-serif",
               }}
             />
             <button
@@ -504,6 +509,7 @@ export default function ChatBox() {
                 borderRadius: 12,
                 cursor: sessionError || loading || !input.trim() ? "not-allowed" : "pointer",
                 fontWeight: 500,
+                fontFamily: "'Gilroy', sans-serif",
               }}
             >
               ➤
@@ -547,6 +553,7 @@ export default function ChatBox() {
                   maxWidth: "80%",
                   fontSize: 14.5,
                   color: "#111",
+                  fontFamily: "'Gilroy', sans-serif",
                 }}
               >
                 {m.text}
@@ -567,6 +574,7 @@ export default function ChatBox() {
                 color: "#c33",
                 fontSize: 14,
                 marginTop: 16,
+                fontFamily: "'Gilroy', sans-serif",
               }}
             >
               {error}
@@ -602,6 +610,7 @@ export default function ChatBox() {
                             border: "1px solid #ccc",
                             background: loading ? "#eee" : "#fafafa",
                             cursor: loading ? "not-allowed" : "pointer",
+                            fontFamily: "'Gilroy', sans-serif",
                           }}
                         >
                           {s}
@@ -646,6 +655,7 @@ export default function ChatBox() {
                                 borderRadius: 6,
                                 border: "1px solid #ccc",
                                 fontSize: 14,
+                                fontFamily: "'Gilroy', sans-serif",
                               }}
                             />
 
@@ -683,6 +693,7 @@ export default function ChatBox() {
                                     cursor: isTimeSlotDisabled(slot.value) || loading
                                       ? "not-allowed"
                                       : "pointer",
+                                    fontFamily: "'Gilroy', sans-serif",
                                   }}
                                 >
                                   {slot.label}
@@ -700,6 +711,7 @@ export default function ChatBox() {
                                 borderRadius: 6,
                                 border: "1px solid #ccc",
                                 fontSize: 14,
+                                fontFamily: "'Gilroy', sans-serif",
                               }}
                             >
                               {timezones.map((z) => (
@@ -721,6 +733,7 @@ export default function ChatBox() {
                                 borderRadius: 12,
                                 cursor: loading || !date || !time ? "not-allowed" : "pointer",
                                 fontWeight: 500,
+                                fontFamily: "'Gilroy', sans-serif",
                               }}
                             >
                               ➤
@@ -766,6 +779,7 @@ export default function ChatBox() {
                                 borderRadius: 6,
                                 border: "1px solid #ccc",
                                 fontSize: 14,
+                                fontFamily: "'Gilroy', sans-serif",
                               }}
                             />
                             <button
@@ -780,6 +794,7 @@ export default function ChatBox() {
                                 borderRadius: 12,
                                 cursor: loading || !input.trim() ? "not-allowed" : "pointer",
                                 fontWeight: 500,
+                                fontFamily: "'Gilroy', sans-serif",
                               }}
                             >
                               ➤
@@ -793,7 +808,7 @@ export default function ChatBox() {
           </div>
 
           {loading && (
-            <div style={{ marginTop: 8, fontSize: 13, color: "#555", padding: 16 }}>
+            <div style={{ marginTop: 8, fontSize: 13, color: "#555", padding: 16, fontFamily: "'Gilroy', sans-serif" }}>
               Submitting...
             </div>
           )}
