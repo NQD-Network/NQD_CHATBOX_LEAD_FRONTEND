@@ -1,8 +1,8 @@
 // pages/_app.js
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import Head from "next/head";
 import Script from "next/script";
+import "../public/fonts/gilroy.css";
 
 export default function MyApp({ Component, pageProps }) {
   const router = useRouter();
@@ -23,14 +23,6 @@ export default function MyApp({ Component, pageProps }) {
 
   return (
     <>
-      <Head>
-        {/* Load Gilroy Font from local storage */}
-        <link
-          rel="stylesheet"
-          href="/fonts/gilroy.css"
-        />
-      </Head>
-
       {/* Load Google Analytics script asynchronously if GA_ID is configured */}
       {GA_ID && (
         <>

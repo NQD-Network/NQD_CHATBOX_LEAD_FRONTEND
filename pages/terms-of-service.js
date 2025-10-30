@@ -14,7 +14,7 @@ export default function TermsOfService() {
       </p>
       <p style={{ marginBottom: 16 }}>
         NQD.ai is not responsible for indirect or consequential damages arising
-        from the use of our platform. All features are provided "as is."
+        from the use of our platform. All features are provided &ldquo;as is.&rdquo;
       </p>
       <p>We may update these terms periodically without prior notice.</p>
     </div>
