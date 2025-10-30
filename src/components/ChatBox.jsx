@@ -89,6 +89,34 @@ export default function ChatBox() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Create a new session with retry logic
+  const createSession = useCallback(async (retryCount = 0) => {
+    const maxRetries = 3;
+    try {
+      const res = await axios.post(`${API_BASE}/api/session`);
+      if (isMountedRef.current && res.data.sessionId) {
+        setSessionId(res.data.sessionId);
+        setSessionError(false);
+      }
+    } catch (err) {
+      console.error("Failed to create session:", err);
+      if (retryCount < maxRetries) {
+        // Retry with exponential backoff
+        const delay = Math.pow(2, retryCount) * 1000;
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            createSession(retryCount + 1);
+          }
+        }, delay);
+      } else {
+        if (isMountedRef.current) {
+          setSessionError(true);
+          setError("Unable to connect to the server. Please refresh the page or try again later.");
+        }
+      }
+    }
+  }, []);
+
   // Setup timezone and create session on load
   useEffect(() => {
     // Check if API_BASE is configured
@@ -114,35 +142,7 @@ export default function ChatBox() {
     return () => {
       isMountedRef.current = false;
     };
-  }, []);
-
-  // Create a new session with retry logic
-  async function createSession(retryCount = 0) {
-    const maxRetries = 3;
-    try {
-      const res = await axios.post(`${API_BASE}/api/session`);
-      if (isMountedRef.current && res.data.sessionId) {
-        setSessionId(res.data.sessionId);
-        setSessionError(false);
-      }
-    } catch (err) {
-      console.error("Failed to create session:", err);
-      if (retryCount < maxRetries) {
-        // Retry with exponential backoff
-        const delay = Math.pow(2, retryCount) * 1000;
-        setTimeout(() => {
-          if (isMountedRef.current) {
-            createSession(retryCount + 1);
-          }
-        }, delay);
-      } else {
-        if (isMountedRef.current) {
-          setSessionError(true);
-          setError("Unable to connect to the server. Please refresh the page or try again later.");
-        }
-      }
-    }
-  }
+  }, [createSession]);
 
   // Update session data after every step with retry logic
   async function updateSession(data, retryCount = 0) {
