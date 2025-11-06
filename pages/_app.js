@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import Script from "next/script";
 import "../public/fonts/gilroy.css";
+import Layout from "../src/components/Layout";
 
 export default function MyApp({ Component, pageProps }) {
   const router = useRouter();
@@ -58,7 +59,9 @@ export default function MyApp({ Component, pageProps }) {
       `}</style>
 
       {/* Render your actual pages */}
-      <Component {...pageProps} />
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
     </>
   );
 }
