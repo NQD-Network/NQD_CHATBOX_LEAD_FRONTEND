@@ -67,7 +67,7 @@ export default function LeftNav() {
     borderRadius: '8px',
     cursor: 'pointer',
     fontWeight: '600',
-    fontSize: '14px',
+    fontSize: '16px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -83,7 +83,7 @@ export default function LeftNav() {
   };
 
   const sectionTitleStyle = {
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '600',
     color: '#6b7280',
     textTransform: 'uppercase',
@@ -125,7 +125,7 @@ export default function LeftNav() {
   };
 
   const projectNameStyle = {
-    fontSize: '14px',
+    fontSize: '15px',
     fontWeight: '500',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -133,7 +133,7 @@ export default function LeftNav() {
   };
 
   const projectDateStyle = {
-    fontSize: '12px',
+    fontSize: '13px',
     color: '#9ca3af',
     marginTop: '2px',
   };
@@ -154,7 +154,7 @@ export default function LeftNav() {
     transition: 'all 0.2s',
     backgroundColor: isActiveItem ? '#e5f3f5' : 'transparent',
     color: isActiveItem ? '#0e8695' : '#4b5563',
-    fontSize: '14px',
+    fontSize: '15px',
     fontWeight: '500',
     textDecoration: 'none',
     justifyContent: isCollapsed ? 'center' : 'flex-start',
