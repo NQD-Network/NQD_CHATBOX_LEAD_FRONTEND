@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useTheme } from '../contexts/ThemeContext';
+import ThemeToggle from './ThemeToggle';
 
 export default function LeftNav() {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { colors } = useTheme();
 
   // Static projects for demo (will be replaced with backend data later)
   const projects = [
@@ -19,11 +22,11 @@ export default function LeftNav() {
   const containerStyle = {
     width: isCollapsed ? '60px' : '260px',
     height: '100vh',
-    backgroundColor: '#f9fafb',
-    borderRight: '1px solid #e5e7eb',
+    backgroundColor: colors.backgroundSecondary,
+    borderRight: `1px solid ${colors.border}`,
     display: 'flex',
     flexDirection: 'column',
-    transition: 'width 0.3s ease',
+    transition: 'width 0.3s ease, background-color 0.3s ease, border-color 0.3s ease',
     position: 'fixed',
     left: 0,
     top: 0,
@@ -33,17 +36,19 @@ export default function LeftNav() {
 
   const headerStyle = {
     padding: isCollapsed ? '16px 8px' : '16px 20px',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: `1px solid ${colors.border}`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    transition: 'border-color 0.3s ease',
   };
 
   const logoStyle = {
     fontSize: '20px',
     fontWeight: '700',
-    color: '#11333d',
+    color: colors.title,
     display: isCollapsed ? 'none' : 'block',
+    transition: 'color 0.3s ease',
   };
 
   const toggleButtonStyle = {
@@ -85,11 +90,12 @@ export default function LeftNav() {
   const sectionTitleStyle = {
     fontSize: '13px',
     fontWeight: '600',
-    color: '#6b7280',
+    color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     padding: '12px 4px 8px',
     display: isCollapsed ? 'none' : 'block',
+    transition: 'color 0.3s ease',
   };
 
   const projectItemStyle = (isActiveItem) => ({
@@ -100,9 +106,9 @@ export default function LeftNav() {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    transition: 'all 0.2s',
-    backgroundColor: isActiveItem ? '#e5f3f5' : 'transparent',
-    color: isActiveItem ? '#0e8695' : '#4b5563',
+    transition: 'all 0.3s',
+    backgroundColor: isActiveItem ? colors.brandLight : 'transparent',
+    color: isActiveItem ? colors.brand : colors.textSecondary,
     justifyContent: isCollapsed ? 'center' : 'flex-start',
   });
 
@@ -110,12 +116,13 @@ export default function LeftNav() {
     width: '20px',
     height: '20px',
     borderRadius: '4px',
-    backgroundColor: '#d1d5db',
+    backgroundColor: colors.borderLight,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '12px',
     flexShrink: 0,
+    transition: 'background-color 0.3s ease',
   };
 
   const projectTextStyle = {
@@ -134,13 +141,15 @@ export default function LeftNav() {
 
   const projectDateStyle = {
     fontSize: '13px',
-    color: '#9ca3af',
+    color: colors.textMuted,
     marginTop: '2px',
+    transition: 'color 0.3s ease',
   };
 
   const footerStyle = {
-    borderTop: '1px solid #e5e7eb',
+    borderTop: `1px solid ${colors.border}`,
     padding: isCollapsed ? '8px' : '8px 16px',
+    transition: 'border-color 0.3s ease',
   };
 
   const footerItemStyle = (isActiveItem) => ({
@@ -151,9 +160,9 @@ export default function LeftNav() {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    transition: 'all 0.2s',
-    backgroundColor: isActiveItem ? '#e5f3f5' : 'transparent',
-    color: isActiveItem ? '#0e8695' : '#4b5563',
+    transition: 'all 0.3s',
+    backgroundColor: isActiveItem ? colors.brandLight : 'transparent',
+    color: isActiveItem ? colors.brand : colors.textSecondary,
     fontSize: '15px',
     fontWeight: '500',
     textDecoration: 'none',
@@ -168,11 +177,11 @@ export default function LeftNav() {
         <button
           style={toggleButtonStyle}
           onClick={() => setIsCollapsed(!isCollapsed)}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.border}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M3 10h14M3 5h14M3 15h14" stroke="#4b5563" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M3 10h14M3 5h14M3 15h14" stroke={colors.textSecondary} strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </button>
       </div>
@@ -198,7 +207,7 @@ export default function LeftNav() {
             key={project.id}
             style={projectItemStyle(false)}
             onMouseEnter={(e) => {
-              if (!isCollapsed) e.currentTarget.style.backgroundColor = '#f3f4f6';
+              if (!isCollapsed) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -219,11 +228,13 @@ export default function LeftNav() {
 
       {/* Footer Links */}
       <div style={footerStyle}>
+        <ThemeToggle isCollapsed={isCollapsed} />
+
         <Link
           href="/"
           style={footerItemStyle(isActive('/'))}
           onMouseEnter={(e) => {
-            if (!isActive('/')) e.currentTarget.style.backgroundColor = '#f3f4f6';
+            if (!isActive('/')) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
           }}
           onMouseLeave={(e) => {
             if (!isActive('/')) e.currentTarget.style.backgroundColor = 'transparent';
@@ -239,7 +250,7 @@ export default function LeftNav() {
           href="/settings"
           style={footerItemStyle(isActive('/settings'))}
           onMouseEnter={(e) => {
-            if (!isActive('/settings')) e.currentTarget.style.backgroundColor = '#f3f4f6';
+            if (!isActive('/settings')) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
           }}
           onMouseLeave={(e) => {
             if (!isActive('/settings')) e.currentTarget.style.backgroundColor = 'transparent';
@@ -255,7 +266,7 @@ export default function LeftNav() {
           href="/privacy-policy"
           style={footerItemStyle(isActive('/privacy-policy'))}
           onMouseEnter={(e) => {
-            if (!isActive('/privacy-policy')) e.currentTarget.style.backgroundColor = '#f3f4f6';
+            if (!isActive('/privacy-policy')) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
           }}
           onMouseLeave={(e) => {
             if (!isActive('/privacy-policy')) e.currentTarget.style.backgroundColor = 'transparent';
@@ -271,7 +282,7 @@ export default function LeftNav() {
           href="/terms-of-service"
           style={footerItemStyle(isActive('/terms-of-service'))}
           onMouseEnter={(e) => {
-            if (!isActive('/terms-of-service')) e.currentTarget.style.backgroundColor = '#f3f4f6';
+            if (!isActive('/terms-of-service')) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
           }}
           onMouseLeave={(e) => {
             if (!isActive('/terms-of-service')) e.currentTarget.style.backgroundColor = 'transparent';

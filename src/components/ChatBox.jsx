@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useTheme } from '../contexts/ThemeContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -55,6 +56,7 @@ function generateTimeSlots() {
 }
 
 export default function ChatBox() {
+  const { colors } = useTheme();
   const [messages, setMessages] = useState([
     { from: "bot", text: "👋 How may I help you?" },
   ]);
@@ -339,7 +341,7 @@ export default function ChatBox() {
       style={{
         width: "100%",
         minHeight: "100vh",
-        background: "#fefefe",
+        background: colors.background,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -356,17 +358,18 @@ export default function ChatBox() {
             position: "fixed",
             top: 0,
             left: 0,
-            background: "#ffffffeb",
+            background: colors.headerBg,
             backdropFilter: "blur(10px)",
             padding: "12px 24px",
-            borderBottom: "1px solid #eee",
+            borderBottom: `1px solid ${colors.border}`,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             zIndex: 10,
+            transition: "background 0.3s ease, border-color 0.3s ease",
           }}
         >
-          <h2 style={{ fontSize: 22, fontWeight: 600, color: "#0e8695", fontFamily: "'Gilroy', sans-serif" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 600, color: colors.brand, fontFamily: "'Gilroy', sans-serif" }}>
             NQD.ai
           </h2>
 
@@ -401,11 +404,11 @@ export default function ChatBox() {
               position: "absolute",
               right: 0,
               bottom: 60,
-              background: "#fff",
-              border: "1px solid #ddd",
+              background: colors.cardBg,
+              border: `1px solid ${colors.border}`,
               borderRadius: 12,
               padding: "12px 20px",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+              boxShadow: `0 4px 16px ${colors.cardShadow}`,
               display: "flex",
               flexDirection: "column",
               gap: 8,
@@ -413,17 +416,18 @@ export default function ChatBox() {
               minWidth: 180,
               zIndex: 101,
               fontFamily: "'Gilroy', sans-serif",
+              transition: "background 0.3s ease, border-color 0.3s ease",
             }}
           >
             <Link
               href="/privacy-policy"
-              style={{ color: "#000", textDecoration: "none" }}
+              style={{ color: colors.text, textDecoration: "none", transition: "color 0.3s ease" }}
             >
               Privacy Policy
             </Link>
             <Link
               href="/terms-of-service"
-              style={{ color: "#000", textDecoration: "none" }}
+              style={{ color: colors.text, textDecoration: "none", transition: "color 0.3s ease" }}
             >
               Terms of Service
             </Link>
@@ -440,14 +444,14 @@ export default function ChatBox() {
             width: "90%",
             marginTop: "20vh",
             transition: "all 0.5s ease",
-            background: "#fff",
+            background: colors.cardBg,
             padding: "60px 40px",
             borderRadius: 24,
-            boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
+            boxShadow: `0 8px 30px ${colors.cardShadow}`,
           }}
         >
-          <h1 style={{ fontSize: 42, fontWeight: 600, color: "#11333d", marginBottom: 40, fontFamily: "'Gilroy', sans-serif" }}>
-            NQD<span style={{ color: "#0e8695" }}>.</span>ai
+          <h1 style={{ fontSize: 42, fontWeight: 600, color: colors.title, marginBottom: 40, fontFamily: "'Gilroy', sans-serif", transition: "color 0.3s ease" }}>
+            NQD<span style={{ color: colors.brand }}>.</span>ai
           </h1>
 
           {error && sessionError && (
@@ -455,14 +459,15 @@ export default function ChatBox() {
               role="alert"
               style={{
                 padding: "12px 16px",
-                background: "#fee",
-                border: "1px solid #fcc",
+                background: colors.errorBg,
+                border: `1px solid ${colors.errorBorder}`,
                 borderRadius: 8,
-                color: "#c33",
+                color: colors.error,
                 fontSize: 14,
                 marginBottom: 20,
                 textAlign: "left",
                 fontFamily: "'Gilroy', sans-serif",
+                transition: "background 0.3s ease, border-color 0.3s ease, color 0.3s ease",
               }}
             >
               {error}
@@ -475,10 +480,11 @@ export default function ChatBox() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              border: "1px solid #d9e3e6",
+              border: `1px solid ${colors.inputBorder}`,
               borderRadius: 18,
               padding: "8px 14px",
-              background: "#f9fafb",
+              background: colors.inputBg,
+              transition: "background 0.3s ease, border-color 0.3s ease",
             }}
           >
             <input
@@ -495,6 +501,8 @@ export default function ChatBox() {
                 fontSize: 16,
                 background: "transparent",
                 fontFamily: "'Gilroy', sans-serif",
+                color: colors.text,
+                transition: "color 0.3s ease",
               }}
             />
             <button
@@ -502,7 +510,7 @@ export default function ChatBox() {
               disabled={sessionError || loading || !input.trim()}
               aria-label="Send message"
               style={{
-                background: sessionError || loading || !input.trim() ? "#ccc" : "#0e8695",
+                background: sessionError || loading || !input.trim() ? colors.buttonDisabled : colors.brand,
                 border: "none",
                 color: "#fff",
                 padding: "8px 14px",
@@ -510,6 +518,7 @@ export default function ChatBox() {
                 cursor: sessionError || loading || !input.trim() ? "not-allowed" : "pointer",
                 fontWeight: 500,
                 fontFamily: "'Gilroy', sans-serif",
+                transition: "background 0.3s ease",
               }}
             >
               ➤
@@ -533,10 +542,11 @@ export default function ChatBox() {
               display: "flex",
               flexDirection: "column",
               gap: 10,
-              background: "#f9fafb",
+              background: colors.backgroundSecondary,
               borderRadius: 16,
               padding: 20,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+              boxShadow: `0 4px 12px ${colors.cardShadow}`,
+              transition: "background 0.3s ease",
             }}
           >
             {messages.map((m, i) => (
@@ -544,7 +554,7 @@ export default function ChatBox() {
                 key={i}
                 style={{
                   alignSelf: m.from === "bot" ? "flex-start" : "flex-end",
-                  background: m.from === "bot" ? "#eef3f5" : "#d1f7f0",
+                  background: m.from === "bot" ? colors.chatBotBg : colors.chatUserBg,
                   padding: "10px 14px",
                   borderRadius:
                     m.from === "bot"
@@ -552,8 +562,9 @@ export default function ChatBox() {
                       : "16px 16px 4px 16px",
                   maxWidth: "80%",
                   fontSize: 14.5,
-                  color: "#111",
+                  color: colors.text,
                   fontFamily: "'Gilroy', sans-serif",
+                  transition: "background 0.3s ease, color 0.3s ease",
                 }}
               >
                 {m.text}
@@ -568,13 +579,14 @@ export default function ChatBox() {
               role="alert"
               style={{
                 padding: "12px 16px",
-                background: "#fee",
-                border: "1px solid #fcc",
+                background: colors.errorBg,
+                border: `1px solid ${colors.errorBorder}`,
                 borderRadius: 8,
-                color: "#c33",
+                color: colors.error,
                 fontSize: 14,
                 marginTop: 16,
                 fontFamily: "'Gilroy', sans-serif",
+                transition: "background 0.3s ease, border-color 0.3s ease, color 0.3s ease",
               }}
             >
               {error}
@@ -607,10 +619,12 @@ export default function ChatBox() {
                           style={{
                             padding: "8px 10px",
                             borderRadius: 8,
-                            border: "1px solid #ccc",
-                            background: loading ? "#eee" : "#fafafa",
+                            border: `1px solid ${colors.border}`,
+                            background: loading ? colors.buttonDisabled : colors.backgroundTertiary,
                             cursor: loading ? "not-allowed" : "pointer",
                             fontFamily: "'Gilroy', sans-serif",
+                            color: colors.text,
+                            transition: "background 0.3s ease, border-color 0.3s ease, color 0.3s ease",
                           }}
                         >
                           {s}
@@ -653,9 +667,12 @@ export default function ChatBox() {
                               style={{
                                 padding: 8,
                                 borderRadius: 6,
-                                border: "1px solid #ccc",
+                                border: `1px solid ${colors.border}`,
                                 fontSize: 14,
                                 fontFamily: "'Gilroy', sans-serif",
+                                background: colors.backgroundTertiary,
+                                color: colors.text,
+                                transition: "background 0.3s ease, border-color 0.3s ease, color 0.3s ease",
                               }}
                             />
 
@@ -681,19 +698,20 @@ export default function ChatBox() {
                                     borderRadius: 8,
                                     border:
                                       time === slot.value
-                                        ? "2px solid #007bff"
-                                        : "1px solid #ccc",
+                                        ? `2px solid ${colors.brand}`
+                                        : `1px solid ${colors.border}`,
                                     background:
-                                      time === slot.value ? "#007bff" : "#fff",
+                                      time === slot.value ? colors.brand : colors.backgroundTertiary,
                                     color: isTimeSlotDisabled(slot.value) || loading
-                                      ? "#aaa"
+                                      ? colors.textDisabled
                                       : time === slot.value
                                         ? "#fff"
-                                        : "#333",
+                                        : colors.text,
                                     cursor: isTimeSlotDisabled(slot.value) || loading
                                       ? "not-allowed"
                                       : "pointer",
                                     fontFamily: "'Gilroy', sans-serif",
+                                    transition: "background 0.3s ease, border-color 0.3s ease, color 0.3s ease",
                                   }}
                                 >
                                   {slot.label}
@@ -709,9 +727,12 @@ export default function ChatBox() {
                               style={{
                                 padding: 8,
                                 borderRadius: 6,
-                                border: "1px solid #ccc",
+                                border: `1px solid ${colors.border}`,
                                 fontSize: 14,
                                 fontFamily: "'Gilroy', sans-serif",
+                                background: colors.backgroundTertiary,
+                                color: colors.text,
+                                transition: "background 0.3s ease, border-color 0.3s ease, color 0.3s ease",
                               }}
                             >
                               {timezones.map((z) => (
@@ -726,7 +747,7 @@ export default function ChatBox() {
                               disabled={loading || !date || !time}
                               aria-label="Submit date and time"
                               style={{
-                                background: loading || !date || !time ? "#ccc" : "#0e8695",
+                                background: loading || !date || !time ? colors.buttonDisabled : colors.brand,
                                 border: "none",
                                 color: "#fff",
                                 padding: "8px 14px",
@@ -734,6 +755,7 @@ export default function ChatBox() {
                                 cursor: loading || !date || !time ? "not-allowed" : "pointer",
                                 fontWeight: 500,
                                 fontFamily: "'Gilroy', sans-serif",
+                                transition: "background 0.3s ease",
                               }}
                             >
                               ➤
@@ -777,9 +799,12 @@ export default function ChatBox() {
                                 flex: 1,
                                 padding: 8,
                                 borderRadius: 6,
-                                border: "1px solid #ccc",
+                                border: `1px solid ${colors.border}`,
                                 fontSize: 14,
                                 fontFamily: "'Gilroy', sans-serif",
+                                background: colors.backgroundTertiary,
+                                color: colors.text,
+                                transition: "background 0.3s ease, border-color 0.3s ease, color 0.3s ease",
                               }}
                             />
                             <button
@@ -787,7 +812,7 @@ export default function ChatBox() {
                               disabled={loading || !input.trim()}
                               aria-label="Submit"
                               style={{
-                                background: loading || !input.trim() ? "#ccc" : "#0e8695",
+                                background: loading || !input.trim() ? colors.buttonDisabled : colors.brand,
                                 border: "none",
                                 color: "#fff",
                                 padding: "8px 14px",
@@ -795,6 +820,7 @@ export default function ChatBox() {
                                 cursor: loading || !input.trim() ? "not-allowed" : "pointer",
                                 fontWeight: 500,
                                 fontFamily: "'Gilroy', sans-serif",
+                                transition: "background 0.3s ease",
                               }}
                             >
                               ➤
@@ -808,7 +834,7 @@ export default function ChatBox() {
           </div>
 
           {loading && (
-            <div style={{ marginTop: 8, fontSize: 13, color: "#555", padding: 16, fontFamily: "'Gilroy', sans-serif" }}>
+            <div style={{ marginTop: 8, fontSize: 13, color: colors.textSecondary, padding: 16, fontFamily: "'Gilroy', sans-serif", transition: "color 0.3s ease" }}>
               Submitting...
             </div>
           )}

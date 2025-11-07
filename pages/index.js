@@ -2,10 +2,12 @@
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import React from "react";
+import { useTheme } from "../src/contexts/ThemeContext";
 
 const ChatBox = dynamic(() => import("../src/components/ChatBox"), { ssr: false });
 
 export default function Home() {
+  const { colors } = useTheme();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nqd.ai/";
   const title = "NQD.ai – Smart Chat Lead Assistant";
   const description =
@@ -34,7 +36,8 @@ export default function Home() {
           alignItems: "center",
           minHeight: "100vh",
           width: "100%",
-          backgroundColor: "#fefefe",
+          backgroundColor: colors.background,
+          transition: "background-color 0.3s ease",
         }}
       >
         <ChatBox />

@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import Script from "next/script";
 import "../public/fonts/gilroy.css";
 import Layout from "../src/components/Layout";
+import { ThemeProvider } from "../src/contexts/ThemeContext";
 
 export default function MyApp({ Component, pageProps }) {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function MyApp({ Component, pageProps }) {
   }, [router.events, GA_ID]);
 
   return (
-    <>
+    <ThemeProvider>
       {/* Load Google Analytics script asynchronously if GA_ID is configured */}
       {GA_ID && (
         <>
@@ -56,12 +57,19 @@ export default function MyApp({ Component, pageProps }) {
           padding: 0;
           font-family: 'Gilroy', sans-serif;
         }
+
+        /* Smooth transitions for all theme changes */
+        * {
+          transition-property: background-color, color, border-color;
+          transition-duration: 0.3s;
+          transition-timing-function: ease;
+        }
       `}</style>
 
       {/* Render your actual pages */}
       <Layout>
         <Component {...pageProps} />
       </Layout>
-    </>
+    </ThemeProvider>
   );
 }
