@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useTheme } from '../contexts/ThemeContext';
@@ -7,7 +7,31 @@ import ThemeToggle from './ThemeToggle';
 export default function LeftNav() {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { colors } = useTheme();
+
+  // Detect mobile and auto-collapse on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // Auto-collapse on mobile by default
+      if (mobile && !isCollapsed) {
+        setIsCollapsed(true);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Function to handle navigation clicks on mobile
+  const handleNavClick = () => {
+    if (isMobile && !isCollapsed) {
+      setIsCollapsed(true);
+    }
+  };
 
   // Static projects for demo (will be replaced with backend data later)
   const projects = [
@@ -161,8 +185,8 @@ export default function LeftNav() {
     alignItems: 'center',
     gap: '10px',
     transition: 'all 0.3s',
-    backgroundColor: isActiveItem ? colors.brandLight : 'transparent',
-    color: isActiveItem ? colors.brand : colors.textSecondary,
+    backgroundColor: isActiveItem ? colors.brand : 'transparent',
+    color: isActiveItem ? '#ffffff' : colors.textSecondary,
     fontSize: '15px',
     fontWeight: '500',
     textDecoration: 'none',
@@ -191,7 +215,10 @@ export default function LeftNav() {
         style={newChatButtonStyle}
         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d7582'}
         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0e8695'}
-        onClick={() => router.push('/')}
+        onClick={() => {
+          router.push('/');
+          handleNavClick();
+        }}
       >
         <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
           <path d="M10 5v10M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -206,6 +233,7 @@ export default function LeftNav() {
           <div
             key={project.id}
             style={projectItemStyle(false)}
+            onClick={handleNavClick}
             onMouseEnter={(e) => {
               if (!isCollapsed) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
             }}
@@ -233,6 +261,7 @@ export default function LeftNav() {
         <Link
           href="/"
           style={footerItemStyle(isActive('/'))}
+          onClick={handleNavClick}
           onMouseEnter={(e) => {
             if (!isActive('/')) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
           }}
@@ -249,6 +278,7 @@ export default function LeftNav() {
         <Link
           href="/settings"
           style={footerItemStyle(isActive('/settings'))}
+          onClick={handleNavClick}
           onMouseEnter={(e) => {
             if (!isActive('/settings')) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
           }}
@@ -265,6 +295,7 @@ export default function LeftNav() {
         <Link
           href="/privacy-policy"
           style={footerItemStyle(isActive('/privacy-policy'))}
+          onClick={handleNavClick}
           onMouseEnter={(e) => {
             if (!isActive('/privacy-policy')) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
           }}
@@ -281,6 +312,7 @@ export default function LeftNav() {
         <Link
           href="/terms-of-service"
           style={footerItemStyle(isActive('/terms-of-service'))}
+          onClick={handleNavClick}
           onMouseEnter={(e) => {
             if (!isActive('/terms-of-service')) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
           }}

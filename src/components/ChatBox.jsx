@@ -529,7 +529,7 @@ export default function ChatBox() {
         /* Active Chat View */
         <div
           style={{
-            width: "70%",
+            width: window.innerWidth < 768 ? "95%" : "70%",
             maxWidth: 900,
             marginTop: 100,
             background: "transparent",

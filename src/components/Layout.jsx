@@ -1,8 +1,21 @@
+import { useState, useEffect } from 'react';
 import LeftNav from './LeftNav';
 import { useTheme } from '../contexts/ThemeContext';
 
 export default function Layout({ children }) {
   const { colors } = useTheme();
+  const [navWidth, setNavWidth] = useState('260px');
+
+  useEffect(() => {
+    const updateNavWidth = () => {
+      const isMobile = window.innerWidth < 768;
+      setNavWidth(isMobile ? '60px' : '260px');
+    };
+
+    updateNavWidth();
+    window.addEventListener('resize', updateNavWidth);
+    return () => window.removeEventListener('resize', updateNavWidth);
+  }, []);
 
   const layoutStyle = {
     display: 'flex',
@@ -14,7 +27,7 @@ export default function Layout({ children }) {
   };
 
   const mainContentStyle = {
-    marginLeft: '260px', // Width of the expanded nav
+    marginLeft: navWidth,
     flex: 1,
     transition: 'margin-left 0.3s ease',
     overflow: 'auto',
