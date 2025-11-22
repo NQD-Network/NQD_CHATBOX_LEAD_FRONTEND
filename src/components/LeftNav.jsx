@@ -4,18 +4,48 @@ import { useRouter } from 'next/router';
 import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 export default function LeftNav() {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const { colors } = useTheme();
+  const [openMenu, setOpenMenu] = useState(null);
+
+  const handleDeleteProject = async (id) => {
+  if (!confirm("Are you sure you want to delete this chat?")) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/session/${id}`, {
+      method: "DELETE"
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      // Remove from UI
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+
+      // Remove from localStorage (for anonymous users)
+      let userSessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
+      userSessions = userSessions.filter(s => s !== id);
+      localStorage.setItem('user_sessions', JSON.stringify(userSessions));
+    }
+  } catch (err) {
+    console.error("Delete failed:", err);
+  }
+};
+
 
   // Detect mobile and auto-collapse on mobile
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Auto-collapse on mobile by default
       if (mobile && !isCollapsed) {
         setIsCollapsed(true);
       }
@@ -26,20 +56,125 @@ export default function LeftNav() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Function to handle navigation clicks on mobile
+  // ✅ Fetch sessions based on login status
+  useEffect(() => {
+    const fetchAllSessions = async () => {
+      try {
+        setLoading(true);
+        const accessToken = localStorage.getItem('access_token');
+        
+        if (accessToken) {
+          // ✅ LOGGED IN: Fetch by userId from backend
+          
+          const userInfoRes = await fetch('/api/userinfo', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+
+          if (userInfoRes.ok) {
+            const userData = await userInfoRes.json();
+            const userId = userData.id || userData.sub;
+            setCurrentUserId(userId);
+
+            if (userId) {
+              const sessionsRes = await fetch(`${API_BASE}/api/session/user/${userId}`);
+              const sessionsData = await sessionsRes.json();
+
+              if (sessionsData.success && sessionsData.sessions) {
+                
+                const userProjects = sessionsData.sessions.map(session => ({
+                  id: session._id,
+                  name: session.firstMessage || session.message || 'Untitled Chat',
+                  date: formatDate(session.updatedAt || session.createdAt),
+                  service: session.service
+                }));
+
+                setProjects(userProjects);
+              }
+            }
+          }
+        } else {
+          // ✅ NOT LOGGED IN: Fetch from localStorage
+          
+          const userSessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
+          
+          if (userSessions.length > 0) {
+            const sessionPromises = userSessions.map(async (sessionId) => {
+              try {
+                const res = await fetch(`${API_BASE}/api/session/${sessionId}`);
+                const data = await res.json();
+                if (data.success && data.session) {
+                  return {
+                    id: data.session._id,
+                    name: data.session.firstMessage || data.session.message || 'Untitled Chat',
+                    date: formatDate(data.session.updatedAt || data.session.createdAt),
+                    service: data.session.service
+                  };
+                }
+                return null;
+              } catch (err) {
+                return null;
+              }
+            });
+
+            const sessions = await Promise.all(sessionPromises);
+            const validSessions = sessions.filter(s => s !== null);
+            setProjects(validSessions);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch sessions:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllSessions();
+
+    // ✅ Listen for session updates from ChatBox
+    const handleSessionUpdate = () => {
+      fetchAllSessions();
+    };
+
+    window.addEventListener('session-updated', handleSessionUpdate);
+
+    return () => {
+      window.removeEventListener('session-updated', handleSessionUpdate);
+    };
+  }, []);
+
+  // Format date helper
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+
   const handleNavClick = () => {
     if (isMobile && !isCollapsed) {
       setIsCollapsed(true);
     }
   };
 
-  // Static projects for demo (will be replaced with backend data later)
-  const projects = [
-    { id: 1, name: 'Project Alpha', date: '2 days ago' },
-    { id: 2, name: 'Customer Support Bot', date: '5 days ago' },
-    { id: 3, name: 'Sales Assistant', date: '1 week ago' },
-    { id: 4, name: 'Technical Support', date: '2 weeks ago' },
-  ];
+  // ✅ Handle project click WITHOUT page refresh
+  const handleProjectClick = (projectId) => {
+    // Direct page reload with new sessionId
+    window.location.href = `/?sessionId=${projectId}`;
+    handleNavClick();
+  };
+
+  // ✅ Handle new chat creation
+  const handleNewChat = () => {
+    // Navigate to home without sessionId
+    window.location.href = '/';
+  };
 
   const isActive = (path) => router.pathname === path;
 
@@ -215,10 +350,7 @@ export default function LeftNav() {
         style={newChatButtonStyle}
         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d7582'}
         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0e8695'}
-        onClick={() => {
-          router.push('/');
-          handleNavClick();
-        }}
+        onClick={handleNewChat}
       >
         <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
           <path d="M10 5v10M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -228,30 +360,82 @@ export default function LeftNav() {
 
       {/* Projects Section */}
       <div style={sectionStyle}>
-        <div style={sectionTitleStyle}>Projects</div>
-        {projects.map((project) => (
-          <div
-            key={project.id}
-            style={projectItemStyle(false)}
-            onClick={handleNavClick}
-            onMouseEnter={(e) => {
-              if (!isCollapsed) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <div style={projectIconStyle}>
-              <svg width="12" height="12" viewBox="0 0 20 20" fill="#6b7280">
-                <path d="M3 4h14a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zm0 2v9h14V6H3z" />
-              </svg>
-            </div>
-            <div style={projectTextStyle}>
-              <div style={projectNameStyle}>{project.name}</div>
-              <div style={projectDateStyle}>{project.date}</div>
-            </div>
-          </div>
-        ))}
+        <div style={sectionTitleStyle}>
+          {loading ? 'Loading...' : projects.length > 0 ? 'Your Chats' : 'No Chats Yet'}
+        </div>
+        {projects.map((project) => {
+          const currentSessionId = router.query.sessionId;
+          const isCurrentSession = currentSessionId === project.id;
+          
+          return (
+            <div
+  key={project.id}
+  style={projectItemStyle(isCurrentSession)}
+  onMouseLeave={() => setOpenMenu(null)}
+>
+  {/* Project Icon */}
+  <div style={projectIconStyle}>
+    <svg width="12" height="12" viewBox="0 0 20 20" fill="#6b7280">
+      <path d="M3 4h14a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zm0 2v9h14V6H3z" />
+    </svg>
+  </div>
+
+  {/* Project Text */}
+  <div
+    style={{ ...projectTextStyle }}
+    onClick={() => handleProjectClick(project.id)}
+  >
+    <div style={projectNameStyle}>{project.name}</div>
+    <div style={projectDateStyle}>{project.date}</div>
+  </div>
+
+  {/* 3 Dots Menu Button */}
+  <div
+    style={{
+      marginLeft: "auto",
+      padding: "5px",
+      cursor: "pointer",
+      display: isCollapsed ? "none" : "block"
+    }}
+    onClick={(e) => {
+      e.stopPropagation();  // prevent click opening chat
+      setOpenMenu(openMenu === project.id ? null : project.id);
+    }}
+  >
+    ⋮
+  </div>
+
+  {/* Dropdown Menu */}
+  {openMenu === project.id && (
+    <div
+      style={{
+        position: "absolute",
+        backgroundColor: colors.backgroundSecondary,
+        border: `1px solid ${colors.border}`,
+        borderRadius: "6px",
+        padding: "6px 10px",
+        right: "10px",
+        marginTop: "40px",
+        zIndex: 999
+      }}
+    >
+      <div
+        style={{
+          padding: "6px 0",
+          cursor: "pointer",
+          color: "red",
+          fontSize: "14px"
+        }}
+        onClick={() => handleDeleteProject(project.id)}
+      >
+        Delete Chat
+      </div>
+    </div>
+  )}
+</div>
+
+          );
+        })}
       </div>
 
       {/* Footer Links */}
@@ -326,12 +510,12 @@ export default function LeftNav() {
           {!isCollapsed && <span>Terms of Service</span>}
         </Link>
 
-
         <Link
           href="/profile"
           style={footerItemStyle(isActive('/profile'))}
+          onClick={handleNavClick}
           onMouseEnter={(e) => {
-            if (!isActive('/profile')) e.currentTarget.style.backgroundColor = '#f3f4f6';
+            if (!isActive('/profile')) e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
           }}
           onMouseLeave={(e) => {
             if (!isActive('/profile')) e.currentTarget.style.backgroundColor = 'transparent';

@@ -148,9 +148,6 @@ export default function ProfilePage() {
         url.searchParams.delete("refresh_token");
         url.searchParams.delete("id_token");
         window.history.replaceState({}, document.title, url.toString());
-        
-      } else {
-        console.log("ℹ️ No tokens in URL parameters");
       }
       
       // Mark tokens as processed
