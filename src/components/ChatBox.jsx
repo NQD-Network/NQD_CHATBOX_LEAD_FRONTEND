@@ -97,20 +97,20 @@ export default function ChatBox() {
   useEffect(() => {
     const getUserIdAndLinkSessions = async () => {
       const accessToken = localStorage.getItem('access_token');
-      
+
       if (accessToken && !sessionsLinked) {
         try {
           const userInfoRes = await fetch('/api/userinfo', {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
-          
+
           if (userInfoRes.ok) {
             const userData = await userInfoRes.json();
             const userId = userData.id || userData.sub;
             setCurrentUserId(userId);
-            
+
             const userSessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
-            
+
             if (userSessions.length > 0) {
               const linkPromises = userSessions.map(async (sessionId) => {
                 try {
@@ -119,62 +119,56 @@ export default function ChatBox() {
                     userId
                   });
                 } catch (err) {
-                  // ✅ Silently fail for individual session links
-                  // Don't block the user flow if one session fails
                   if (err.response?.status === 404) {
-                    // Session no longer exists - remove from localStorage
                     return null;
                   }
-                  // Log error but continue with other sessions
                   return null;
                 }
               });
-              
+
               await Promise.all(linkPromises);
               localStorage.removeItem('user_sessions');
               setSessionsLinked(true);
               window.dispatchEvent(new Event('session-updated'));
             }
           } else {
-            // ✅ Token might be expired or invalid
             if (userInfoRes.status === 401) {
-              // Clear invalid token
               localStorage.removeItem('access_token');
               setError("Session expired. Please log in again.");
             }
           }
         } catch (err) {
-          // ✅ Network or other errors - don't block the app
           setLinkSessionError(true);
-          // User can still continue without linking old sessions
         }
       }
     };
-    
+
     getUserIdAndLinkSessions();
   }, [sessionsLinked]);
 
-  // ✅ Load session from URL or create new one
+  // ✅ CRITICAL FIX: Wait for router to be ready before loading session
   useEffect(() => {
+    if (!router.isReady) {
+      return;
+    }
+
     if (sessionLoadedRef.current) return;
 
     const urlSessionId = router.query.sessionId;
 
     if (urlSessionId) {
-      // Load existing session from URL
+      // ✅ Load existing session from URL
       loadExistingSession(urlSessionId);
       sessionLoadedRef.current = true;
     } else {
-      // Create new session
+      // ✅ Create new session only if NO sessionId in URL
       const initSession = async () => {
-        // Wait a bit for userId to be set if user is logged in
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         const newSessionId = await createNewSession();
         if (newSessionId) {
           setSessionId(newSessionId);
-          
-          // ✅ Only store in localStorage if user is NOT logged in
+
           if (!currentUserId) {
             const existingSessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
             if (!existingSessions.includes(newSessionId)) {
@@ -187,24 +181,22 @@ export default function ChatBox() {
       initSession();
       sessionLoadedRef.current = true;
     }
-  }, [router.query.sessionId, currentUserId]);
+  }, [router.isReady, router.query.sessionId, currentUserId]);
 
   async function loadExistingSession(sessionId) {
     try {
       setLoading(true);
       setLoadSessionError(false);
-      
+
       const res = await axios.get(`${API_BASE}/api/session/${sessionId}`);
-      
+
       if (res.data.success && res.data.session) {
         const session = res.data.session;
 
-        // Restore messages
         if (session.messages && session.messages.length > 0) {
           setMessages(session.messages);
         }
 
-        // Restore collected data
         setCollected({
           message: session.message || "",
           name: session.name || "",
@@ -216,7 +208,6 @@ export default function ChatBox() {
 
         setSessionId(sessionId);
 
-        // Determine stage based on collected data
         if (session.bestTime) {
           setStage("done");
         } else if (session.phone) {
@@ -232,23 +223,20 @@ export default function ChatBox() {
           setStage("chooseService");
         }
       } else {
-        // ✅ Invalid session data
         setLoadSessionError(true);
         setError("Unable to load this conversation. Starting a new one...");
-        
-        // Create new session after delay
+
         setTimeout(async () => {
           const newSessionId = await createNewSession();
           if (newSessionId) {
             setSessionId(newSessionId);
-            router.replace(`/chat?sessionId=${newSessionId}`, undefined, { shallow: true });
+            router.replace(`/?sessionId=${newSessionId}`, undefined, { shallow: true });
           }
         }, 2000);
       }
     } catch (err) {
-      // ✅ Handle different error types
       setLoadSessionError(true);
-      
+
       if (err.response?.status === 404) {
         setError("This conversation no longer exists. Starting a new one...");
         addMessage("bot", "Starting a fresh conversation 👋");
@@ -258,15 +246,14 @@ export default function ChatBox() {
       } else {
         setError("Unable to load conversation. Please check your internet connection.");
       }
-      
-      // Create new session after showing error
+
       setTimeout(async () => {
         setError(null);
         const newSessionId = await createNewSession();
         if (newSessionId) {
           setSessionId(newSessionId);
           if (router.query.sessionId) {
-            router.replace(`/chat?sessionId=${newSessionId}`, undefined, { shallow: true });
+            router.replace(`/?sessionId=${newSessionId}`, undefined, { shallow: true });
           }
         }
       }, 3000);
@@ -280,13 +267,11 @@ export default function ChatBox() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ✅ Create a new session (with userId if logged in)
   const createNewSession = async (retryCount = 0) => {
     const maxRetries = 3;
     try {
       const payload = {};
-      
-      // ✅ Add userId if user is logged in
+
       if (currentUserId) {
         payload.userId = currentUserId;
       }
@@ -331,14 +316,13 @@ export default function ChatBox() {
     };
   }, []);
 
-  // Update session data after every step with retry logic
   async function updateSession(data, retryCount = 0) {
     if (!sessionId) {
       return;
     }
-    
+
     const maxRetries = 2;
-    
+
     try {
       await axios.put(`${API_BASE}/api/session/${sessionId}`, data);
       window.dispatchEvent(new Event('session-updated'));
@@ -349,26 +333,19 @@ export default function ChatBox() {
           updateSession(data, retryCount + 1);
         }, delay);
       } else {
-        // ✅ After all retries failed
         if (err.response?.status === 404) {
-          // Session was deleted or doesn't exist
           setError("Your session expired. Creating a new one...");
-          
-          // Create new session
+
           setTimeout(async () => {
             const newSessionId = await createNewSession();
             if (newSessionId) {
               setSessionId(newSessionId);
               setError(null);
-              router.replace(`/chat?sessionId=${newSessionId}`, undefined, { shallow: true });
+              router.replace(`/?sessionId=${newSessionId}`, undefined, { shallow: true });
             }
           }, 2000);
         } else {
-          // ✅ Network or other errors - show non-blocking warning
-          // Don't interrupt user flow, just warn them
           setError("Changes may not be saved. Please check your connection.");
-          
-          // Auto-hide error after 5 seconds
           setTimeout(() => setError(null), 5000);
         }
       }
@@ -380,7 +357,6 @@ export default function ChatBox() {
     setMessages((m) => {
       const updatedMessages = [...m, newMessage];
 
-      // Update session with new messages
       if (sessionId) {
         updateSession({ messages: updatedMessages });
       }
@@ -397,16 +373,15 @@ export default function ChatBox() {
 
     if (stage === "initial") {
       const firstMessage = input.trim();
-      const newData = { 
-        message: firstMessage, 
-        firstMessage: firstMessage 
+      const newData = {
+        message: firstMessage,
+        firstMessage: firstMessage
       };
       setCollected((prev) => ({ ...prev, ...newData }));
       await updateSession(newData);
       setStage("chooseService");
       addMessage("bot", "Please select a service from the list below 👇");
-      
-      // ✅ Trigger update to refresh LeftNav with new project name
+
       window.dispatchEvent(new Event('session-updated'));
     }
 
@@ -504,26 +479,22 @@ export default function ChatBox() {
         ...payload,
         sessionId,
       });
-      
+
       if (res.data && res.data.success) {
         addMessage("bot", "✅ Thank you! We will contact you soon.");
         setStage("done");
         setError(null);
-        
-        // ✅ Optionally show success message in UI
+
         setTimeout(() => {
           addMessage("bot", "Feel free to start a new conversation anytime!");
         }, 2000);
       } else {
-        // ✅ API returned but with success: false
         throw new Error("Submission failed");
       }
     } catch (err) {
       if (retryCount < maxRetries) {
-        // ✅ Retry with exponential backoff
         const delay = Math.pow(2, retryCount) * 1000;
-        
-        // Update user about retry
+
         setMessages((prev) => {
           const updated = [...prev];
           updated[updated.length - 1] = {
@@ -532,23 +503,22 @@ export default function ChatBox() {
           };
           return updated;
         });
-        
+
         setTimeout(() => {
           if (isMountedRef.current) {
             submitLead(payload, retryCount + 1);
           }
         }, delay);
       } else {
-        // ✅ All retries failed - provide helpful error message
-        setMessages((prev) => prev.slice(0, -1)); // Remove "Submitting..." message
-        
+        setMessages((prev) => prev.slice(0, -1));
+
         if (!navigator.onLine) {
           addMessage("bot", "❌ No internet connection. Please check your network and try again.");
           setError("You appear to be offline. Please check your internet connection.");
         } else if (err.response?.status === 400) {
           addMessage("bot", "❌ Invalid information provided. Please check your details and try again.");
           setError("Please verify all information is correct.");
-          setStage("askBestTime"); // Let them try again
+          setStage("askBestTime");
         } else if (err.response?.status >= 500) {
           addMessage("bot", "❌ Our server is experiencing issues. Please try again in a few minutes.");
           setError("Server error. Your data has been saved and we'll contact you soon.");
@@ -556,8 +526,7 @@ export default function ChatBox() {
           addMessage("bot", "❌ Unable to submit. Please email us directly at support@nqd.ai or try again later.");
           setError("Submission failed. Please contact us directly or try again.");
         }
-        
-        // ✅ Offer option to retry manually
+
         setTimeout(() => {
           addMessage("bot", "Would you like to try submitting again?");
         }, 1000);
@@ -620,7 +589,7 @@ export default function ChatBox() {
             transition: "background 0.3s ease, border-color 0.3s ease",
           }}
         >
-          <h2 style={{marginLeft:50, fontSize: 22, fontWeight: 600, color: colors.brand, fontFamily: "'Gilroy', sans-serif" }}>
+          <h2 style={{ marginLeft: 50, fontSize: 22, fontWeight: 600, color: colors.brand, fontFamily: "'Gilroy', sans-serif" }}>
             NQD.ai
           </h2>
         </header>
