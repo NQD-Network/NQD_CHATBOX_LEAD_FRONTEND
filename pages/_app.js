@@ -5,6 +5,8 @@ import Script from "next/script";
 import "../public/fonts/gilroy.css";
 import Layout from "../src/components/Layout";
 import { ThemeProvider } from "../src/contexts/ThemeContext";
+import SessionWatcher from "../src/components/SessionWatcher";
+import "../src/styles/SessionWatcher.css";
 
 export default function MyApp({ Component, pageProps }) {
   const router = useRouter();
@@ -68,6 +70,7 @@ export default function MyApp({ Component, pageProps }) {
 
       {/* Render your actual pages */}
       <Layout>
+        <SessionWatcher />
         <Component {...pageProps} />
       </Layout>
     </ThemeProvider>
