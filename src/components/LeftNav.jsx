@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useTheme } from '../contexts/ThemeContext';
@@ -15,30 +15,98 @@ export default function LeftNav() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const { colors } = useTheme();
   const [openMenu, setOpenMenu] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, bottom: 'auto' });
+  const menuButtonRef = useRef(null);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renamingValue, setRenamingValue] = useState("");
+  const renameInputRef = useRef(null);
+
+  // Add rename handler function
+  const handleRenameProject = async (id, currentName) => {
+    setRenamingId(id);
+    setRenamingValue(currentName);
+    setOpenMenu(null);
+
+    // Focus input after state update
+    setTimeout(() => {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    }, 0);
+  };
+
+  // Add save rename function
+  const handleSaveRename = async (id) => {
+    if (!renamingValue.trim()) {
+      alert("Name cannot be empty");
+      return;
+    }
+
+    if (renamingValue === projects.find(p => p.id === id)?.name) {
+      // No change, just cancel
+      setRenamingId(null);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/session/${id}/rename`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ newName: renamingValue.trim() })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Update UI
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id === id ? { ...p, name: renamingValue.trim() } : p
+          )
+        );
+        setRenamingId(null);
+
+        // Trigger update event for other components
+        window.dispatchEvent(new Event('session-updated'));
+      } else {
+        alert(data.error || "Failed to rename chat");
+      }
+    } catch (err) {
+      console.error("Rename failed:", err);
+      alert("Failed to rename chat. Please try again.");
+    }
+  };
+
+  // Add cancel rename function
+  const handleCancelRename = () => {
+    setRenamingId(null);
+    setRenamingValue("");
+  };
 
   const handleDeleteProject = async (id) => {
-  if (!confirm("Are you sure you want to delete this chat?")) return;
+    if (!confirm("Are you sure you want to delete this chat?")) return;
 
-  try {
-    const res = await fetch(`${API_BASE}/api/session/${id}`, {
-      method: "DELETE"
-    });
+    try {
+      const res = await fetch(`${API_BASE}/api/session/${id}`, {
+        method: "DELETE"
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.success) {
-      // Remove from UI
-      setProjects((prev) => prev.filter((p) => p.id !== id));
+      if (data.success) {
+        // Remove from UI
+        setProjects((prev) => prev.filter((p) => p.id !== id));
 
-      // Remove from localStorage (for anonymous users)
-      let userSessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
-      userSessions = userSessions.filter(s => s !== id);
-      localStorage.setItem('user_sessions', JSON.stringify(userSessions));
+        // Remove from localStorage (for anonymous users)
+        let userSessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
+        userSessions = userSessions.filter(s => s !== id);
+        localStorage.setItem('user_sessions', JSON.stringify(userSessions));
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
     }
-  } catch (err) {
-    console.error("Delete failed:", err);
-  }
-};
+  };
 
 
   // Detect mobile and auto-collapse on mobile
@@ -62,10 +130,10 @@ export default function LeftNav() {
       try {
         setLoading(true);
         const accessToken = localStorage.getItem('access_token');
-        
+
         if (accessToken) {
           // ✅ LOGGED IN: Fetch by userId from backend
-          
+
           const userInfoRes = await fetch('/api/userinfo', {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
@@ -80,7 +148,7 @@ export default function LeftNav() {
               const sessionsData = await sessionsRes.json();
 
               if (sessionsData.success && sessionsData.sessions) {
-                
+
                 const userProjects = sessionsData.sessions.map(session => ({
                   id: session._id,
                   name: session.firstMessage || session.message || 'Untitled Chat',
@@ -94,9 +162,9 @@ export default function LeftNav() {
           }
         } else {
           // ✅ NOT LOGGED IN: Fetch from localStorage
-          
+
           const userSessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
-          
+
           if (userSessions.length > 0) {
             const sessionPromises = userSessions.map(async (sessionId) => {
               try {
@@ -363,79 +431,199 @@ export default function LeftNav() {
         <div style={sectionTitleStyle}>
           {loading ? 'Loading...' : projects.length > 0 ? 'Your Chats' : 'No Chats Yet'}
         </div>
-        {projects.map((project) => {
+
+        {projects.map((project, index) => {
           const currentSessionId = router.query.sessionId;
           const isCurrentSession = currentSessionId === project.id;
-          
+          const isRenaming = renamingId === project.id;
+
           return (
             <div
-  key={project.id}
-  style={projectItemStyle(isCurrentSession)}
-  onMouseLeave={() => setOpenMenu(null)}
->
-  {/* Project Icon */}
-  <div style={projectIconStyle}>
-    <svg width="12" height="12" viewBox="0 0 20 20" fill="#6b7280">
-      <path d="M3 4h14a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zm0 2v9h14V6H3z" />
-    </svg>
-  </div>
+              key={project.id}
+              style={{
+                ...projectItemStyle(isCurrentSession),
+                position: "relative"
+              }}
+              onMouseLeave={() => !isRenaming && setOpenMenu(null)}
+            >
+              {/* Project Icon */}
+              <div style={projectIconStyle}>
+                <svg width="12" height="12" viewBox="0 0 20 20" fill="#6b7280">
+                  <path d="M3 4h14a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zm0 2v9h14V6H3z" />
+                </svg>
+              </div>
 
-  {/* Project Text */}
-  <div
-    style={{ ...projectTextStyle }}
-    onClick={() => handleProjectClick(project.id)}
-  >
-    <div style={projectNameStyle}>{project.name}</div>
-    <div style={projectDateStyle}>{project.date}</div>
-  </div>
+              {/* Project Text OR Rename Input */}
+              {isRenaming ? (
+                <div style={{ flex: 1, display: "flex", gap: "4px" }}>
+                  <input
+                    ref={renameInputRef}
+                    type="text"
+                    value={renamingValue}
+                    onChange={(e) => setRenamingValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSaveRename(project.id);
+                      } else if (e.key === "Escape") {
+                        handleCancelRename();
+                      }
+                    }}
+                    onBlur={() => handleSaveRename(project.id)}
+                    style={{
+                      flex: 1,
+                      padding: "4px 6px",
+                      fontSize: "14px",
+                      border: `1px solid ${colors.brand}`,
+                      borderRadius: "4px",
+                      outline: "none",
+                      background: colors.backgroundTertiary,
+                      color: colors.text,
+                      fontFamily: "'Gilroy', sans-serif"
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  style={{ ...projectTextStyle }}
+                  onClick={() => handleProjectClick(project.id)}
+                >
+                  <div style={projectNameStyle}>{project.name}</div>
+                  <div style={projectDateStyle}>{project.date}</div>
+                </div>
+              )}
 
-  {/* 3 Dots Menu Button */}
-  <div
-    style={{
-      marginLeft: "auto",
-      padding: "5px",
-      cursor: "pointer",
-      display: isCollapsed ? "none" : "block"
-    }}
-    onClick={(e) => {
-      e.stopPropagation();  // prevent click opening chat
-      setOpenMenu(openMenu === project.id ? null : project.id);
-    }}
-  >
-    ⋮
-  </div>
+              {/* 3 Dots Menu Button (hide during rename) */}
+              {!isRenaming && (
+                <div
+                  ref={openMenu === project.id ? menuButtonRef : null}
+                  style={{
+                    marginLeft: "auto",
+                    padding: "5px",
+                    cursor: "pointer",
+                    display: isCollapsed ? "none" : "block"
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
 
-  {/* Dropdown Menu */}
-  {openMenu === project.id && (
-    <div
-      style={{
-        position: "absolute",
-        backgroundColor: colors.backgroundSecondary,
-        border: `1px solid ${colors.border}`,
-        borderRadius: "6px",
-        padding: "6px 10px",
-        right: "10px",
-        marginTop: "40px",
-        zIndex: 999
-      }}
-    >
-      <div
-        style={{
-          padding: "6px 0",
-          cursor: "pointer",
-          color: "red",
-          fontSize: "14px"
-        }}
-        onClick={() => handleDeleteProject(project.id)}
-      >
-        Delete Chat
-      </div>
-    </div>
-  )}
-</div>
+                    const buttonRect = e.currentTarget.getBoundingClientRect();
+                    const spaceBelow = window.innerHeight - buttonRect.bottom;
+                    const menuHeight = 100;
 
+                    if (spaceBelow < menuHeight && buttonRect.top > menuHeight) {
+                      setMenuPosition({
+                        bottom: window.innerHeight - buttonRect.top,
+                        top: 'auto'
+                      });
+                    } else {
+                      setMenuPosition({
+                        top: buttonRect.top,
+                        bottom: 'auto'
+                      });
+                    }
+
+                    setOpenMenu(openMenu === project.id ? null : project.id);
+                  }}
+                >
+                  ⋮
+                </div>
+              )}
+
+              {/* Smart Positioned Dropdown Menu */}
+              {openMenu === project.id && !isRenaming && (
+                <div
+                  style={{
+                    position: "fixed",
+                    backgroundColor: colors.backgroundSecondary,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: "8px",
+                    padding: "4px 0",
+                    minWidth: "160px",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+                    zIndex: 9999,
+                    left: isCollapsed ? "70px" : "220px",
+                    top: menuPosition.top !== 'auto' ? `${menuPosition.top}px` : 'auto',
+                    bottom: menuPosition.bottom !== 'auto' ? `${menuPosition.bottom}px` : 'auto',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Rename Option */}
+                  <div
+                    style={{
+                      padding: "10px 16px",
+                      cursor: "pointer",
+                      color: colors.text,
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      transition: "background 0.15s",
+                    }}
+                    onClick={() => handleRenameProject(project.id, project.name)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = colors.border;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <span>✏️</span>
+                    <span>Rename</span>
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{
+                    height: "1px",
+                    background: colors.border,
+                    margin: "4px 0"
+                  }} />
+
+                  {/* Delete Option */}
+                  <div
+                    style={{
+                      padding: "10px 16px",
+                      cursor: "pointer",
+                      color: "#ef4444",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      transition: "background 0.15s",
+                    }}
+                    onClick={() => {
+                      handleDeleteProject(project.id);
+                      setOpenMenu(null);
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = colors.border;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <span>🗑️</span>
+                    <span>Delete Chat</span>
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
+
+        {/* ✅ Add this CSS animation in your global styles or in a <style> tag */}
+        <style jsx>{`
+                @keyframes fadeIn {
+                from {
+                      opacity: 0;
+                      transform: translateY(-5px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+              }
+      `}</style>
       </div>
 
       {/* Footer Links */}
