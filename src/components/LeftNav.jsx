@@ -364,6 +364,7 @@ export default function LeftNav() {
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
+    color: colors.textMuted,
   };
 
   const projectDateStyle = {
@@ -500,7 +501,8 @@ export default function LeftNav() {
                     marginLeft: "auto",
                     padding: "5px",
                     cursor: "pointer",
-                    display: isCollapsed ? "none" : "block"
+                    display: isCollapsed ? "none" : "block",
+                    color: colors.textMuted,
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
